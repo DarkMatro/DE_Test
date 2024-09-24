@@ -3,8 +3,7 @@ Optimized CRUD Log Aggregator using Polars for large datasets.
 
 This module is designed to process and aggregate user CRUD action logs from large CSV files
 with millions of users and billions of events. The script aggregates user actions (CREATE, READ,
-UPDATE, DELETE)
-over the past 7 days and stores the results in a new CSV file.
+UPDATE, DELETE) over the past 7 days and stores the results in a new CSV file.
 
 The solution uses Polars for high-performance and memory-efficient processing, handling large
 datasets with multi-threading and optimized data access.
