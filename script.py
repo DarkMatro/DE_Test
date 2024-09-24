@@ -82,21 +82,22 @@ def load_or_cache_day_data(input_dir: str, cache_dir: str, dt: str) -> Any | Non
 
 def read_logs_with_cache(input_dir: str, cache_dir: str, dt: str) -> pl.DataFrame:
     """
-    Читает логи за последние 7 дней с использованием кеша и объединяет их в один DataFrame.
+    Reads user logs from the past 7 days and aggregates them into a single DataFrame.
 
     Parameters
     ----------
     input_dir : str
-        Путь до директории с исходными CSV логами.
+        Path to the directory containing the CSV log files.
     cache_dir : str
         Путь до директории для хранения промежуточных результатов.
     dt : str
-        Целевая дата для агрегации (YYYY-MM-DD).
+        The target date for the aggregation (YYYY-MM-DD). Logs from this date and the
+        preceding 6 days will be processed.
 
     Returns
     -------
     polars.DataFrame
-        Полярный DataFrame, содержащий агрегированные данные за 7 дней.
+         A Polars DataFrame containing aggregated CRUD counts for each user.
     """
     dt = datetime.datetime.strptime(dt, '%Y-%m-%d').date()
 
@@ -138,16 +139,16 @@ def read_logs_with_cache(input_dir: str, cache_dir: str, dt: str) -> pl.DataFram
 
 def save_aggregated_data(df: pl.DataFrame, output_dir: str, dt: str) -> None:
     """
-    Сохраняет агрегированные данные в CSV файл.
+    Saves the aggregated data to a CSV file in the output directory.
 
     Parameters
     ----------
     df : polars.DataFrame
-        Агрегированный Polars DataFrame с действиями пользователей.
+        Aggregated DataFrame with user actions.
     output_dir : str
-        Директория, куда будет сохранён итоговый CSV файл.
+        Path to the directory where the output CSV file will be saved.
     dt : str
-        Целевая дата для агрегации (YYYY-MM-DD).
+        The target date (YYYY-MM-DD) for which the aggregation was performed.
 
     Returns
     -------
@@ -158,29 +159,35 @@ def save_aggregated_data(df: pl.DataFrame, output_dir: str, dt: str) -> None:
     print(f"Агрегированные данные сохранены в {output_file}")
 
 
-def aggregate_logs(dt: str) -> None:
+def aggregate_logs(input_dir: str, output_dir: str, dt: str) -> None:
     """
-    Основная функция, которая читает логи, агрегирует их и сохраняет результат.
+    Main function that reads logs, aggregates them, and saves the results.
 
     Parameters
     ----------
+    input_dir : str
+        Directory containing the input CSV files with logs.
+    output_dir : str
+        Directory where the aggregated result CSV file will be saved.
     dt : str
-        Целевая дата для агрегации (YYYY-MM-DD).
+        The target date (YYYY-MM-DD) for which the aggregation will be performed.
 
     Returns
     -------
     None
     """
     # Шаг 1: Читаем логи за 7 дней с использованием кеша
-    aggregated_df = read_logs_with_cache(INPUT_DIR, CACHE_DIR, dt)
+    aggregated_df = read_logs_with_cache(input_dir, CACHE_DIR, dt)
 
     # Шаг 2: Сохраняем агрегированные данные в CSV
-    save_aggregated_data(aggregated_df, OUTPUT_DIR, dt)
+    save_aggregated_data(aggregated_df, output_dir, dt)
 
 
 if __name__ == "__main__":
     # Command-line arguments
-    target_date = sys.argv[1]  # Target date for aggregation (e.g., 2024-09-16)
+    in_dir = sys.argv[1]
+    out_dir = sys.argv[2]
+    target_date = sys.argv[3]  # Target date for aggregation (e.g., 2024-09-16)
 
     # Run the aggregation process
-    aggregate_logs(target_date)
+    aggregate_logs(in_dir, out_dir, target_date)
