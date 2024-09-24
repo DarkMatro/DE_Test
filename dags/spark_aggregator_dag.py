@@ -1,7 +1,21 @@
-from airflow import DAG
-from airflow.utils.dates import days_ago
-from airflow.operators.bash import BashOperator
+"""
+DAG for running daily CRUD log aggregation.
+
+This DAG is scheduled to run daily at 7:00 AM, executing a bash command to run a Python script
+that processes CRUD logs and aggregates them over the past 7 days. The task uses
+Polars for data processing and stores intermediate results to avoid reprocessing.
+
+DAG schedule: 7:00 AM daily
+
+Input: Daily log files in CSV format
+Output: Aggregated results stored in CSV format
+"""
+
 from datetime import timedelta
+
+from airflow import DAG
+from airflow.operators.bash import BashOperator
+from airflow.utils.dates import days_ago
 
 # Определяем директории на хосте, которые будут замаунчены в контейнеры (МОЖЕТ БЫТЬ ИЗМЕНЕНО)
 INPUT_DIR = "./input"
@@ -29,6 +43,7 @@ with DAG(
     # Операция для выполнения Spark задачи
     run_spark_job = BashOperator(
         task_id='run_spark_job',
-        bash_command=f"spark-submit --master local /dags/spark_job.py {INPUT_DIR} {OUTPUT_DIR} {{ ds }}",
+        bash_command=f"spark-submit --master local /dags/spark_job.py {INPUT_DIR} {OUTPUT_DIR} {{ "
+                     f"ds }}",
         dag=dag,
     )
