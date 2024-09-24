@@ -1,0 +1,81 @@
+version: '3'
+services:
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+
+  webserver:
+    image: apache/airflow:2.6.0
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'False'
+      AIRFLOW__WEBSERVER__RBAC: 'True'
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'True'
+      _AIRFLOW_WWW_USER_USERNAME: admin      # Логин пользователя Airflow
+      _AIRFLOW_WWW_USER_PASSWORD: admin  # Пароль пользователя Airflow
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    volumes:
+      - ./dags:/app/dags
+      - ./logs:/app/logs
+      - ./plugins:/app/plugins
+      - ./input:/app/input
+      - ./output:/app/output
+      - ./cache:/app/cache
+    entrypoint: bash -c 'airflow db init && airflow users create -r Admin -u $${_AIRFLOW_WWW_USER_USERNAME} -p $${_AIRFLOW_WWW_USER_PASSWORD} -e admin@example.com -f Admin -l User && airflow webserver'
+
+  scheduler:
+    image: apache/airflow:2.6.0
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    depends_on:
+      - postgres
+      - webserver
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+    entrypoint: bash -c 'airflow scheduler'
+
+  spark-master:
+    image: bitnami/spark:3.3.1
+    environment:
+      - SPARK_MODE=master
+    ports:
+      - "7077:7077"
+      - "8081:8081"
+    volumes:
+      - ./input:/input
+      - ./output:/output
+      - ./cache:/cache
+
+  spark-worker:
+    image: bitnami/spark:3.3.1
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    depends_on:
+      - spark-master
+    ports:
+      - "8082:8081"
+    volumes:
+      - ./input:/input
+      - ./output:/output
+      - ./cache:/cache
+
+volumes:
+  postgres_data:
